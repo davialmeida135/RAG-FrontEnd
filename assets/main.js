@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         try {
             appendMessage('user', queryText);
+            document.getElementById('queryText').value = '';
             // Make the API request to Flask
             const response = await axios.post(`${apiUrl}/query`, { query_text: queryText });
 
@@ -48,62 +49,58 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Clear input field after sending the query
-        document.getElementById('queryText').value = '';
+        
     });
 
     // Handle file upload
     uploadBtn.addEventListener('click', async () => {
         const fileInput = document.getElementById('fileInput');
         const file = fileInput.files[0];
-
+        const loadingSymbol = document.getElementById('loadingSymbol');
+        const uploadResponse = document.getElementById('uploadResponse');
+    
         if (!file) {
             uploadResponse.textContent = 'Please select a file!';
             uploadResponse.classList.remove('d-none');
             return;
         }
-
+    
         const formData = new FormData();
         formData.append('file', file);
-
+    
         try {
+            // Show loading symbol
+            loadingSymbol.classList.remove('d-none');
+            uploadResponse.classList.add('d-none');
+    
             const response = await axios.post(`${apiUrl}/upload`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
             });
-            uploadResponse.textContent = response.data.success;
+    
+            // Hide loading symbol
+            loadingSymbol.classList.add('d-none');
+    
+            // Display success message
+            uploadResponse.textContent = 'File uploaded successfully!';
             uploadResponse.classList.remove('d-none');
-            loadFileList();  // Reload the file list after successful upload
+            uploadResponse.classList.remove('alert-info');
+            uploadResponse.classList.add('alert-success');
+    
+            // Reload the file list
+            loadFileList();
         } catch (error) {
+            // Hide loading symbol
+            loadingSymbol.classList.add('d-none');
+    
+            // Display error message
             uploadResponse.textContent = 'Error: ' + error.response.data.error;
             uploadResponse.classList.remove('d-none');
+            uploadResponse.classList.remove('alert-success');
+            uploadResponse.classList.add('alert-danger');
         }
     });
-
-    // Load file list
-    async function loadFileList() {
-        try {
-            const response = await axios.get(`${apiUrl}/files`);
-            fileList.innerHTML = '';  // Clear the file list
-
-            // Populate the file list with files from the server
-            response.data.files.forEach(file => {
-                const listItem = document.createElement('li');
-                listItem.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
-                listItem.textContent = file;
-
-                const deleteBtn = document.createElement('button');
-                deleteBtn.classList.add('btn', 'btn-danger', 'btn-sm');
-                deleteBtn.textContent = 'Delete';
-                deleteBtn.addEventListener('click', () => deleteFile(file));
-
-                listItem.appendChild(deleteBtn);
-                fileList.appendChild(listItem);
-            });
-        } catch (error) {
-            console.error('Error loading file list:', error);
-        }
-    }
 
     // Handle file deletion
     async function deleteFile(filename) {
